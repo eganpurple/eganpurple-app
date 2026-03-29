@@ -1,24 +1,23 @@
 from datetime import datetime, timedelta, UTC
+import os
 
 from jose import jwt
 from passlib.context import CryptContext
 
-SECRET_KEY = "change-this-later-to-a-long-random-secret"
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-me")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    # bcrypt has a 72-byte limit, so trim before hashing
-    password = password[:72]
+    password = password[:72]  # 🔥 IMPORTANT
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # keep login behavior consistent with hashing behavior
-    plain_password = plain_password[:72]
+    plain_password = plain_password[:72]  # 🔥 IMPORTANT
     return pwd_context.verify(plain_password, hashed_password)
 
 

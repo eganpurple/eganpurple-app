@@ -1,0 +1,16 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# SQLite database
+*.db
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment files
+.env
+
+# OS junk
+.DS_Store

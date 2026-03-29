@@ -4,8 +4,8 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
-from models import User
-from schemas import UserCreate, UserLogin, UserOut, Token
+from models import User, ScanTarget
+from schemas import UserCreate, UserLogin, UserOut, Token, TargetCreate, TargetOut
 from auth import (
     hash_password,
     verify_password,
@@ -113,3 +113,78 @@ def get_current_user(
 @app.get("/me", response_model=UserOut)
 def read_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@app.post("/targets", response_model=TargetOut)
+def create_target(
+    target: TargetCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    domain = target.domain.strip().lower()
+
+    existing_target = (
+        db.query(ScanTarget)
+        .filter(
+            ScanTarget.user_id == current_user.id,
+            ScanTarget.domain == domain,
+        )
+        .first()
+    )
+
+    if existing_target:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target already exists",
+        )
+
+    new_target = ScanTarget(
+        user_id=current_user.id,
+        domain=domain,
+        description=target.description,
+    )
+
+    db.add(new_target)
+    db.commit()
+    db.refresh(new_target)
+
+    return new_target
+
+
+@app.get("/targets", response_model=list[TargetOut])
+def list_targets(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    targets = (
+        db.query(ScanTarget)
+        .filter(ScanTarget.user_id == current_user.id)
+        .order_by(ScanTarget.id.desc())
+        .all()
+    )
+
+    return targets
+
+
+@app.get("/targets/{target_id}", response_model=TargetOut)
+def get_target(
+    target_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    target = (
+        db.query(ScanTarget)
+        .filter(
+            ScanTarget.id == target_id,
+            ScanTarget.user_id == current_user.id,
+        )
+        .first()
+    )
+
+    if not target:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target not found",
+        )
+
+    return target

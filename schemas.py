@@ -25,3 +25,19 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class TargetCreate(BaseModel):
+    domain: str
+    description: str | None = None
+
+
+class TargetOut(BaseModel):
+    id: int
+    domain: str
+    description: str | None = None
+    user_id: int
+
+    model_config = {
+        "from_attributes": True
+    }

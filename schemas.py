@@ -41,3 +41,32 @@ class TargetOut(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+class ScanJobCreate(BaseModel):
+    target_id: int
+    scan_type: str
+
+
+class ScanJobOut(BaseModel):
+    id: int
+    user_id: int
+    target_id: int
+    scan_type: str
+    status: str
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
+class ScanResultOut(BaseModel):
+    id: int
+    job_id: int
+    result_type: str
+    value: str
+    raw_output: str | None = None
+
+    model_config = {
+        "from_attributes": True
+    }

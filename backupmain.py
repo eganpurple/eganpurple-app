@@ -1,5 +1,3 @@
-import os
-import shutil
 import subprocess
 
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -28,7 +26,7 @@ from auth import (
     ALGORITHM,
 )
 
-DEFAULT_SUBFINDER_PATH = r"C:\Users\admin\go\bin\subfinder.exe"
+SUBFINDER_PATH = r"C:\Users\admin\go\bin\subfinder.exe"
 
 app = FastAPI()
 
@@ -40,34 +38,6 @@ def startup():
 
 
 security = HTTPBearer()
-
-
-def resolve_subfinder_path() -> str | None:
-    """
-    Resolve subfinder path in a way that works across environments.
-
-    Priority:
-    1. SUBFINDER_PATH environment variable
-    2. Known local Windows path
-    3. PATH lookup for subfinder
-    4. PATH lookup for subfinder.exe
-    """
-    env_path = os.getenv("SUBFINDER_PATH")
-    if env_path and os.path.exists(env_path):
-        return env_path
-
-    if os.path.exists(DEFAULT_SUBFINDER_PATH):
-        return DEFAULT_SUBFINDER_PATH
-
-    path_lookup = shutil.which("subfinder")
-    if path_lookup:
-        return path_lookup
-
-    exe_lookup = shutil.which("subfinder.exe")
-    if exe_lookup:
-        return exe_lookup
-
-    return None
 
 
 @app.get("/")
@@ -269,22 +239,12 @@ def create_scan_job(
     db.refresh(new_job)
 
     if scan_type == "enum":
-        subfinder_path = resolve_subfinder_path()
-        print("Resolved subfinder path:", subfinder_path)
-
-        if not subfinder_path:
-            print("subfinder not found in this environment; marking job as failed.")
-            new_job.status = "failed"
-            db.commit()
-            db.refresh(new_job)
-            return new_job
-
         try:
             new_job.status = "running"
             db.commit()
 
             result = subprocess.run(
-                [subfinder_path, "-d", target.domain],
+                [SUBFINDER_PATH, "-d", target.domain],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -307,10 +267,12 @@ def create_scan_job(
             db.refresh(new_job)
 
         except Exception as e:
-            print(f"Scan execution failed: {e}")
             new_job.status = "failed"
             db.commit()
-            db.refresh(new_job)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Scan execution failed: {str(e)}",
+            )
 
     return new_job
 
